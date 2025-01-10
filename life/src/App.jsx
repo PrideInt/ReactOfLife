@@ -18,6 +18,65 @@ const createNewGrid = (grid) => {
   return g;
 }
 
+const patterns = {
+  first: [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [1, -1],
+    [2, 1]
+  ],
+  second: [
+    [0, 0],
+    [-1, 0],
+    [-2, 0],
+    [-1, 1],
+    [-2, -1]
+  ],
+  third: [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [1, 1],
+    [2, -1]
+  ],
+  fourth: [
+    [0, 0],
+    [-1, 0],
+    [-2, 0],
+    [-1, -1],
+    [-2, 1]
+  ],
+  fifth: [
+    [0, 0],
+    [0, -1],
+    [0, -2],
+    [1, -2],
+    [-1, -1]
+  ],
+  sixth: [
+    [0, 0],
+    [0, 1],
+    [0, 2],
+    [1, 2],
+    [-1, 1]
+  ],
+  seventh: [
+    [0, 0],
+    [0, -1],
+    [0, -2],
+    [-1, -2],
+    [1, -1]
+  ],
+  eighth: [
+    [0, 0],
+    [0, 1],
+    [0, 2],
+    [-1, 2],
+    [1, 1]
+  ],
+}
+
 function App() {
   let width = document.documentElement.clientWidth;
   let height = document.documentElement.clientHeight;
@@ -63,7 +122,7 @@ function App() {
     resize();
     window.addEventListener('resize', resize);
 
-    const g = new Array(Math.floor(height / cellSize));
+    const g = new Array(Math.floor(height / cellSize) * 2);
     for (let i = 0; i < g.length; i++) {
       g[i] = new Array(Math.floor(width / cellSize));
     }
@@ -73,7 +132,6 @@ function App() {
         g[i][j] = 0;
       }
     }
-    console.log(g);
 
     setGrid(g);
 
@@ -96,12 +154,23 @@ function App() {
       ctx.fillStyle = fillStyle;
 
       if (grid !== undefined && grid.length > 0) {
-        // Test seed pattern: glider. Will make random ones later :)
-        grid[30][50] = 1;
-        grid[31][50] = 1;
-        grid[32][50] = 1;
-        grid[31][49] = 1;
-        grid[32][51] = 1;
+        
+        // Make n patterns of population 5
+        for (let n = 0; n < 4; n++) {
+          const row = Math.floor(Math.random() * grid.length);
+          const col = Math.floor(Math.random() * grid[row].length);
+
+          const pattern = patterns[Object.keys(patterns)[Math.floor(Math.random() * Object.keys(patterns).length)]];
+
+          for (let i = 0; i < pattern.length; i++) {
+            const r = row + pattern[i][0];
+            const c = col + pattern[i][1];
+
+            if (r >= 0 && r < grid.length && c >= 0 && c < grid[r].length) {
+              grid[r][c] = 1;
+            }
+          }
+        }
   
         for (let row = 0; row < grid.length; row++) {
           for (let col = 0; col < grid[row].length; col++) {
