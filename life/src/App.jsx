@@ -3,39 +3,54 @@ import './App.css'
 import { use, useEffect } from 'react';
 import { useState } from 'react'
 
-const initCanvas = () => {
-  const canvas = document.getElementById('life');
-  const ctx = canvas.getContext('2d');
+const createNewGrid = (grid) => {
+  const g = new Array(grid.length);
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+  for (let i = 0; i < g.length; i++) {
+    g[i] = new Array(grid[i].length);
+  }
 
-  for (let i = 0; i < canvas.width; i += 10) {
-    ctx.beginPath();
-    ctx.moveTo(i, 0);
-    ctx.lineTo(i, canvas.height);
-    ctx.stroke();
+  for (let i = 0; i < g.length; i++) {
+    for (let j = 0; j < g[i].length; j++) {
+      g[i][j] = 0;
+    }
   }
-  for (let i = 0; i < canvas.height; i += 10) {
-    ctx.beginPath();
-    ctx.moveTo(0, i);
-    ctx.lineTo(canvas.width, i);
-    ctx.stroke();
-  }
-  requestAnimationFrame(initCanvas);
+  return g;
 }
 
 function App() {
-  const [count, setCount] = useState(0);
-  const [conway, setConway] = useState(undefined);
-
   let width = document.documentElement.clientWidth;
   let height = document.documentElement.clientHeight;
+
+  const cellSize = 15;
+
+  const [grid, setGrid] = useState([]);
+  const [begin, setBegin] = useState(false);
 
   // Create canvas with grid lines
   useEffect(() => {
     const canvas = document.getElementById('life');
-    const ctx = canvas.getContext('2d');
+
+    const initCanvas = () => {
+      const canvas = document.getElementById('life');
+      const ctx = canvas.getContext('2d');
+    
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+  
+      for (let i = 0; i < canvas.width; i += cellSize) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+      }
+      for (let i = 0; i < canvas.height; i += cellSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(canvas.width, i);
+        ctx.stroke();
+      }
+      requestAnimationFrame(initCanvas);
+    }
 
     requestAnimationFrame(initCanvas);
 
@@ -48,43 +63,218 @@ function App() {
     resize();
     window.addEventListener('resize', resize);
 
-    setConway(ctx);
+    const g = new Array(Math.floor(height / cellSize));
+    for (let i = 0; i < g.length; i++) {
+      g[i] = new Array(Math.floor(width / cellSize));
+    }
+
+    for (let i = 0; i < g.length; i++) {
+      for (let j = 0; j < g[i].length; j++) {
+        g[i][j] = 0;
+      }
+    }
+    console.log(g);
+
+    setGrid(g);
 
     return () => {
       window.removeEventListener('resize', resize);
     }
   }, []);
 
+  /**
+   * Here, we will initialize the grid with a pattern
+   * called a "seed". This seed will be used to start
+   * the game of life.
+   */
+  useEffect(() => {
+    const initPattern = () => {
+      const canvas = document.getElementById('life');
+      const ctx = canvas.getContext('2d');
+
+      const fillStyle = 'rgba(255, 255, 255, 0.62)';
+      ctx.fillStyle = fillStyle;
+
+      if (grid !== undefined && grid.length > 0) {
+        // Test seed pattern: glider. Will make random ones later :)
+        grid[30][50] = 1;
+        grid[31][50] = 1;
+        grid[32][50] = 1;
+        grid[31][49] = 1;
+        grid[32][51] = 1;
+  
+        for (let row = 0; row < grid.length; row++) {
+          for (let col = 0; col < grid[row].length; col++) {
+            if (grid[row][col] === 1) {
+              ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            }
+          }
+        }
+      }
+    }
+    initPattern();  
+    setBegin(true);
+
+  }, [begin]);
+
+  /**
+   * Conway's Game of Life
+   * 
+   * Rules:
+   * 
+   * 1. Any live cell with fewer than 2 live neighbors dies
+   * 2. Any live cell with 2 or 3 live neighbors lives on to the next generation
+   * 3. Any live cell with more than 3 live neighbors dies
+   * 4. Any dead cell with exactly 3 live neighbors becomes a live cell
+   * 
+   * Here, we will implement these rules to update the grid every 100 milliseconds,
+   * applying the rules to each cell in the grid, thus creating the next generation,
+   * and so on.
+   */
+  useEffect(() => {
+    const canvas = document.getElementById('life');
+    const ctx = canvas.getContext('2d');
+
+    const fillStyle = 'rgba(255, 255, 255, 0.62)';
+    ctx.fillStyle = fillStyle;
+
+    /**
+     * Helper function to get number of neighbors of a cell
+     * 
+     * @param {*} row 
+     * @param {*} col 
+     * @returns numNeighbors : number of neighbors in the cell at row, col
+     */
+    const getNumNeighbors = (row, col) => {
+      let numNeighbors = 0;
+
+      if (row - 1 >= 0 && col - 1 >= 0 && grid[row - 1][col - 1] === 1) {
+        numNeighbors++;
+      }
+      if (row - 1 >= 0 && grid[row - 1][col] === 1) {
+        numNeighbors++;
+      }
+      if (row - 1 >= 0 && col + 1 < grid.length && grid[row - 1][col + 1] === 1) {
+        numNeighbors++;
+      }
+      if (col - 1 >= 0 && grid[row][col - 1] === 1) {
+        numNeighbors++;
+      }
+      if (col + 1 < grid.length && grid[row][col + 1] === 1) {
+        numNeighbors++;
+      }
+      if (row + 1 < grid.length && col - 1 >= 0 && grid[row + 1][col - 1] === 1) {
+        numNeighbors++;
+      }
+      if (row + 1 < grid.length && grid[row + 1][col] === 1) {
+        numNeighbors++;
+      }
+      if (row + 1 < grid.length && col + 1 < grid.length && grid[row + 1][col + 1] === 1) {
+        numNeighbors++;
+      }
+      return numNeighbors;
+    }
+
+    /**
+     * Helper function to get neighbors of a cell
+     * 
+     * @param {*} row 
+     * @param {*} col 
+     * @returns neighbors : array of neighbors of the cell at row, col
+     */
+    const getNeighbors = (row, col) => {
+      let neighbors = [];
+
+      if (row - 1 >= 0 && col - 1 >= 0 && grid[row - 1][col - 1] === 1) {
+        neighbors.push([row - 1, col - 1]);
+      }
+      if (row - 1 >= 0 && grid[row - 1][col] === 1) {
+        neighbors.push([row - 1, col]);
+      }
+      if (row - 1 >= 0 && col + 1 < grid.length && grid[row - 1][col + 1] === 1) {
+        neighbors.push([row - 1, col + 1]);
+      }
+      if (col - 1 >= 0 && grid[row][col - 1] === 1) {
+        neighbors.push([row, col - 1]);
+      }
+      if (col + 1 < grid.length && grid[row][col + 1] === 1) {
+        neighbors.push([row, col + 1]);
+      }
+      if (row + 1 < grid.length && col - 1 >= 0 && grid[row + 1][col - 1] === 1) {
+        neighbors.push([row + 1, col - 1]);
+      }
+      if (row + 1 < grid.length && grid[row + 1][col] === 1) {
+        neighbors.push([row + 1, col]);
+      }
+      if (row + 1 < grid.length && col + 1 < grid.length && grid[row + 1][col + 1] === 1) {
+        neighbors.push([row + 1, col + 1]);
+      }
+      return neighbors;
+    }
+
+    // Rule 1: Any live cell with fewer than 2 live neighbors dies
+    const ruleOne = (row, col) => {
+      if (grid[row][col] === 1 && getNumNeighbors(row, col) < 2) {
+        return true;
+      }
+      return false;
+    }
+
+    // Rule 2: Any live cell with 2 or 3 live neighbors lives on to the next generation
+    const ruleTwo = (row, col) => {
+      if (grid[row][col] === 1 && (getNumNeighbors(row, col) === 2 || getNumNeighbors(row, col) === 3)) {
+        return true;
+      }
+      return false;
+    }
+
+    // Rule 3: Any live cell with more than 3 live neighbors dies
+    const ruleThree = (row, col) => {
+      if (grid[row][col] === 1 && getNumNeighbors(row, col) > 3) {
+        return true;
+      }
+      return false;
+    }
+
+    // Rule 4: Any dead cell with exactly 3 live neighbors becomes a live cell
+    const ruleFour = (row, col) => {
+      if (grid[row][col] === 0 && getNumNeighbors(row, col) === 3) {
+        return true;
+      }
+      return false;
+    }
+
+    const updateCells = () => {
+      if (grid !== undefined && grid.length > 0) {
+        const newGenGrid = [];
+
+        for (let row = 0; row < grid.length; row++) {
+          newGenGrid[row] = [];
+
+          for (let col = 0; col < grid[row].length; col++) {
+            if (ruleOne(row, col) || ruleThree(row, col)) {
+              newGenGrid[row][col] = 0;
+              ctx.clearRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            } else if (ruleFour(row, col)) {
+              newGenGrid[row][col] = 1;
+              ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            } else {
+              newGenGrid[row][col] = grid[row][col];
+            }
+          }
+        }
+        setGrid(newGenGrid);
+      }
+    }
+
+    setTimeout(() => {
+      requestAnimationFrame(updateCells);
+    }, 100);
+  }, [grid]);
+
   return (
     <div>
       <canvas id="life"></canvas>
-      {
-        /*
-        <div>
-          <a href="https://vite.dev" target="_blank">
-            <img src={viteLogo} className="logo" alt="Vite logo" />
-          </a>
-          <a href="https://react.dev" target="_blank">
-            <img src={reactLogo} className="logo react" alt="React logo" />
-          </a>
-        </div>
-
-        <h1>Vite + React</h1>
-
-        <div className="card">
-          <button onClick={() => setCount((count) => count + 1)}>
-            count is {count}
-          </button>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test HMR
-          </p>
-        </div>
-
-        <p className="read-the-docs">
-          Click on the Vite and React logos to learn more
-        </p>
-        */
-      }
     </div>
   )
 }
